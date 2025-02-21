@@ -1,0 +1,69 @@
+pkgbase=kodi-git
+pkgname=("$pkgbase")
+pkgver=r67586.cd3f2e08cd2
+pkgrel=1
+arch=('x86_64')
+url="https://kodi.tv"
+license=('GPL2')
+makedepends=('bluez-libs' 'cmake' 'curl' 'dav1d' 'doxygen' 'git' 'glew' 'gperf' 'hicolor-icon-theme' 'java-runtime<21' 'fmt' 'libass' 'libbluray' 'libcdio' 'libcec' 'libgl' 'mariadb-libs' 'libmicrohttpd' 'libmodplug' 'libmpeg2' 'libnfs' 'libpulse' 'libva' 'libvdpau' 'libxrandr' 'libxslt' 'lirc' 'lzo' 'mesa' 'nasm' 'pipewire' 'python-pycryptodomex' 'python-pillow' 'python-pybluez' 'python-simplejson' 'smbclient' 'sndio' 'spdlog' 'taglib' 'tinyxml' 'swig' 'upower' 'giflib' 'rapidjson' 'ghostscript' 'meson' 'gtest' 'graphviz' 'pcre' 'tinyxml2' 'libdisplay-info' 'python-setuptools' 'wayland-protocols' 'waylandpp' 'libxkbcommon' 'libinput' 'exiv2')
+depends=('bluez-libs' 'curl' 'dav1d' 'desktop-file-utils' 'hicolor-icon-theme' 'fmt' 'lcms2' 'libass' 'libbluray' 'libcdio' 'libcec' 'libmicrohttpd' 'libnfs' 'libpulse' 'libva' 'libvdpau' 'libxslt' 'lirc' 'lzo' 'mariadb-libs' 'mesa' 'libpipewire' 'python-pillow' 'python-pycryptodomex' 'python-simplejson' 'smbclient' 'sndio' 'spdlog' 'sqlite' 'tinyxml' 'taglib' 'libxrandr' 'libxkbcommon' 'waylandpp' 'libinput' 'pcre' 'tinyxml2' 'libdisplay-info'  'exiv2')
+_libdvdcss_version="1.4.3-Next-Nexus-Alpha2-2"
+_libdvdnav_version="6.1.1-Next-Nexus-Alpha2-2"
+_libdvdread_version="6.1.3-Next-Nexus-Alpha2-2"
+_ffmpeg_version="7.1"
+_crossguid_version="ca1bf4b810e2d188d04cb6286f957008ee1b7681"
+_fstrcmp_version="0.7.D001"
+_flatbuffers_version="23.3.3"
+_libudfread_version="1.1.2"
+source=("git+https://github.com/xbmc/xbmc.git" "https://mirrors.kodi.tv/build-deps/sources/crossguid-$_crossguid_version.tar.gz" "https://mirrors.kodi.tv/build-deps/sources/fstrcmp-$_fstrcmp_version.tar.gz" "https://mirrors.kodi.tv/build-deps/sources/flatbuffers-$_flatbuffers_version.tar.gz" "https://mirrors.kodi.tv/build-deps/sources/libudfread-$_libudfread_version.tar.gz")
+noextract=("crossguid-$_crossguid_version.tar.gz" "fstrcmp-$_fstrcmp_version.tar.gz" "flatbuffers-$_flatbuffers_version.tar.gz" "libudfread-$_libudfread_version.tar.gz")
+b2sums=('SKIP' 'SKIP' 'SKIP' 'SKIP')
+pkgver() {
+  cd xbmc
+  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+prepare() {
+  [[ -d kodi-build ]] && rm -rf kodi-build
+  mkdir "$srcdir/kodi-build"
+  cd xbmc
+  rm -rf system/certs
+}
+build() {
+  export LDFLAGS="${LDFLAGS//-Wl,-fuse-ld=mold/}"
+  cd "$srcdir/kodi-build"
+  _args=(
+    -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_INSTALL_PREFIX=/usr
+    -DCMAKE_INSTALL_LIBDIR=/usr/lib
+    -DENABLE_INTERNAL_RapidJSON=OFF
+    -DENABLE_INTERNAL_CROSSGUID=ON
+    -DENABLE_INTERNAL_FSTRCMP=ON
+    -DENABLE_INTERNAL_FLATBUFFERS=ON
+    -DENABLE_INTERNAL_UDFREAD=ON
+    -DCROSSGUID_URL="$srcdir/crossguid-$_crossguid_version.tar.gz"
+    -DFSTRCMP_URL="$srcdir/fstrcmp-$_fstrcmp_version.tar.gz"
+    -DFLATBUFFERS_URL="$srcdir/flatbuffers-$_flatbuffers_version.tar.gz"
+    -DUDFREAD_URL="$srcdir/libudfread-$_libudfread_version.tar.gz"
+    -DAPP_RENDER_SYSTEM=gles
+  )
+  cmake "${_args[@]}" ../xbmc
+  make
+}
+package_kodi-git() {
+  pkgdesc="A software media player and entertainment hub for digital media (master branch, $_renderer renderer)"
+  provides=("kodi-common=${pkgver}" 'kodi-x11' 'kodi-wayland' 'kodi-gbm')
+  conflicts=('kodi' 'kodi-gles' 'kodi-x11' 'kodi-wayland' 'kodi-gbm')
+  _components=(
+    'kodi'
+    'kodi-bin'
+  )
+  cd kodi-build
+  for _cmp in ${_components[@]}; do
+  DESTDIR="$pkgdir" /usr/bin/cmake \
+    -DCMAKE_INSTALL_COMPONENT="$_cmp" \
+     -P cmake_install.cmake
+  done
+  mkdir -p "$pkgdir"/usr/lib/kodi/addons
+  mkdir -p "$pkgdir"/usr/share/kodi/system/certs
+  ln -s /etc/ssl/cert.pem "$pkgdir"/usr/share/kodi/system/certs/cacert.pem
+}

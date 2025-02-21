@@ -1,0 +1,38 @@
+pkgname=('pop-launcher-git')
+pkgbase=pop-launcher-git
+pkgver=1.2.1.r66.g6a1b8b9
+pkgrel=3
+arch=('x86_64' 'aarch64')
+url="https://github.com/pop-os/launcher"
+license=('MPL-2.0')
+depends=('dbus' 'fd' 'libqalculate' 'libegl' 'libxkbcommon' 'pop-icon-theme-git' 'sh' 'xdg-utils')
+makedepends=('cargo' 'clang' 'git' 'just' 'lld')
+source=('git+https://github.com/pop-os/launcher.git')
+sha256sums=('SKIP')
+pkgver() {
+  cd launcher
+  git describe --long --tags --abbrev=7 | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
+}
+prepare() {
+  cd launcher
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+build() {
+  cd launcher
+  export RUSTUP_TOOLCHAIN=stable
+  CC=clang just build-release --frozen
+}
+check() {
+  cd launcher
+  export RUSTUP_TOOLCHAIN=stable
+  just check
+}
+package_pop-launcher-git() {
+  pkgdesc="Modular IPC-based desktop launcher service"
+  provides=("${pkgname%-git}")
+  conflicts=("${pkgname%-git}")
+  cd launcher
+  just rootdir="$pkgdir" install
+  rm -rf "$pkgdir/usr/lib/${pkgname%-git}/scripts/system76-power"
+}

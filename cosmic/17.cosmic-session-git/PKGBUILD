@@ -1,0 +1,34 @@
+pkgname=cosmic-session-git
+pkgver=1.0.0.alpha.4.r6.g998cf3f
+pkgrel=1
+pkgdesc="Session manager for the COSMIC desktop environment"
+arch=('x86_64' 'aarch64')
+url="https://github.com/pop-os/cosmic-session"
+license=('GPL-3.0-or-later')
+depends=('cosmic-app-library-git' 'cosmic-applets-git' 'cosmic-bg-git' 'cosmic-comp-git' 'cosmic-files-git' 'cosmic-greeter-git' 'cosmic-icons-git' 'cosmic-idle-git' 'cosmic-launcher-git' 'cosmic-notifications-git' 'cosmic-osd-git' 'cosmic-panel-git' 'cosmic-randr-git' 'cosmic-screenshot-git' 'cosmic-settings-daemon-git' 'cosmic-settings-git' 'cosmic-workspaces-git' 'otf-fira-mono' 'otf-fira-sans' 'switcheroo-control' 'xdg-desktop-portal-cosmic-git' 'xorg-xwayland')
+makedepends=('cargo' 'git' 'just' 'mold')
+provides=("${pkgname%-git}")
+conflicts=("${pkgname%-git}")
+source=('git+https://github.com/pop-os/cosmic-session.git')
+sha256sums=('SKIP')
+pkgver() {
+  cd "${pkgname%-git}"
+  git describe --long --tags --abbrev=7 | sed 's/^epoch-//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+prepare() {
+  cd "${pkgname%-git}"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+build() {
+  cd "${pkgname%-git}"
+  export RUSTUP_TOOLCHAIN=stable
+  export XDP_COSMIC="/usr/lib/xdg-desktop-portal-cosmic"
+  XDP_COSMIC="/usr/lib/xdg-desktop-portal-cosmic" nice cargo build --release --frozen --offline
+}
+package() {
+  cd "${pkgname%-git}"
+  just rootdir="$pkgdir" install
+  install -Dm644 data/dconf/profile/cosmic -t "$pkgdir/usr/share/dconf/profile/"
+}
+

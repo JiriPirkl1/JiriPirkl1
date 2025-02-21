@@ -1,0 +1,42 @@
+pkgname=wine-staging-wow64-git
+pkgver=10.1.r125.g4de5639
+pkgrel=1
+pkgdesc="A compatibility layer for running Windows programs"
+url="https://gitlab.winehq.org/wine/wine"
+license=('LGPL-2.1-or-later')
+arch=('x86_64')
+depends=(alsa-lib fontconfig freetype2 gettext gnutls gst-plugins-base-libs libpcap libpulse libxcomposite libxcursor libxi libxinerama libxkbcommon libxrandr opencl-icd-loader pcsclite sdl2 unixodbc v4l-utils wayland desktop-file-utils libgphoto2)
+makedepends=(libxxf86vm mesa mesa-libgl vulkan-icd-loader autoconf bison flex git mingw-w64-gcc opencl-headers perl vulkan-headers)
+source=("git+https://gitlab.winehq.org/wine/wine-staging.git" "git+https://gitlab.winehq.org/wine/wine.git")
+sha256sums=('SKIP' 'SKIP')
+OPTIONS=(!lto)
+pkgver() {
+  cd "$srcdir/wine"
+  local _version=$(
+    git tag --list 'wine-[0-9]*.[0-9]*' \
+      | sed -E 's/^[^0-9]+//;s/^.*[A-Za-z]{2}.*$//' \
+      | sort -V | tail -1
+  )
+  local _revision=$(git rev-list --count --cherry-pick wine-$_version...HEAD)
+  local _hash=$(git rev-parse --short=7 HEAD)
+  printf '%s.r%s.g%s' "${_version:?}" "${_revision:?}" "${_hash:?}"
+}
+build() {
+  "$srcdir/wine-staging/staging/patchinstall.py" -a -d "$srcdir/wine"
+  cd "$srcdir/wine"
+  ./configure --disable-tests \
+              --prefix=/usr \
+              --libdir=/usr/lib \
+              --enable-archs=x86_64,i386 \
+              --disable-win16 \
+              --enable-win64
+  make
+}
+package() {
+  cd "$srcdir/wine"
+  make install \
+    prefix="$pkgdir/usr" \
+    libdir="$pkgdir/usr/lib" \
+    dlldir="$pkgdir/usr/lib/wine"
+  ln -sf wine "$pkgdir/usr/bin/wine64"
+}

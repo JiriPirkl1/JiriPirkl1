@@ -1,0 +1,31 @@
+pkgname=cosmic-bg-git
+pkgver=1.0.0.alpha.2.r0.g584f6b3
+pkgrel=2
+pkgdes="COSMIC session service which applies backgrounds to displays."
+arch=('x86_64' 'aarch64')
+url="https://github.com/pop-os/cosmic-bg"
+license=('MPL-2.0')
+depends=('hicolor-icon-theme' 'libxkbcommon')
+makedepends=('cargo' 'clang' 'git' 'just' 'mold' 'nasm')
+provides=("${pkgname%-git}")
+conflicts=("${pkgname%-git}")
+source=('git+https://github.com/pop-os/cosmic-bg.git')
+sha256sums=('SKIP')
+pkgver() {
+  cd "${pkgname%-git}"
+  git describe --long --tags --abbrev=7 | sed 's/^epoch-//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+prepare() {
+  cd "${pkgname%-git}"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+build() {
+  cd "${pkgname%-git}"
+  export RUSTUP_TOOLCHAIN=stable
+  nice just build-release
+}
+package() {
+  cd "${pkgname%-git}"
+  just rootdir="$pkgdir" install
+}
