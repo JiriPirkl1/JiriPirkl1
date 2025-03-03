@@ -1,0 +1,38 @@
+pkgname=('llvm-git')
+pkgver=19.0.0_r495959.9f3334e9932f
+pkgrel=1
+arch=('x86_64')
+depends=('gcc-libs' 'glibc' 'llvm-libs' 'curl' 'perl' 'zlib' 'zstd' 'libffi' 'libedit' 'libxml2' 'xz' 'ncurses' 'python' 'compiler-rt' 'libc++abi')
+makedepends=('llvm' 'cmake' 'ninja' 'python-sphinx' 'clang' 'spirv-llvm-translator' 'zlib' 'curl' 'libffi' 'libedit' 'libxml2' 'python-setuptools' 'python-psutil' 'python-myst-parser' 'swig')
+source=("llvm-project::git+https://github.com/llvm/llvm-project.git")
+_python_optimize() {
+  python -m compileall "$@"
+  python -O -m compileall "$@"
+  python -OO -m compileall "$@"
+}
+pkgver() {
+    cd llvm-project/cmake/Modules
+    local _pkgver=$(awk -F 'MAJOR |MINOR |PATCH |)' \
+            'BEGIN { ORS="." ; i=0 } \
+             /set\(LLVM_VERSION_/ { print $2 ; i++ ; if (i==2) ORS="" } \
+             END { print "\n" }' \
+             LLVMVersion.cmake)_r$(git rev-list --count HEAD).$(git rev-parse --short HEAD)
+    echo "$_pkgver"
+}
+build() {
+    cmake \
+        -B _build \
+        -S "$srcdir"/llvm-project/llvm  \
+        -G Ninja \
+        -D CMAKE_BUILD_TYPE=Release \
+        -D CMAKE_INSTALL_PREFIX=/usr \
+        -D LLVM_BINUTILS_INCDIR=/usr/include \
+        -D LLVM_ENABLE_PROJECTS="clang;clang-tools-extra;compiler-rt;libclc;lld;lldb;polly" \
+        -D LLVM_ENABLE_RUNTIMES="libcxxabi;libcxx"
+    ninja -C _build $NINJAFLAGS
+}
+package_llvm-git() {
+    provides=('llvm' 'llvm-libs' 'clang' 'clang-tools-extra' 'compiler-rt' 'libc' 'lld' 'lldb' 'polly' 'libcxxabi' 'libcxx')
+    conflicts=('llvm' 'llvm-libs' 'clang' 'clang-tools-extra' 'compiler-rt' 'libc' 'lld' 'lldb' 'polly' 'libcxxabi' 'libcxx')
+    DESTDIR="$pkgdir" ninja -C _build $NINJAFLAGS install
+}
