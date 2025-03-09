@@ -27,7 +27,7 @@ build() {
     ninja -C _build $NINJAFLAGS
 }
 package() {
-    provides=('llvm-git' 'llvm' 'llvm-libs-git'  'llvm-libs' 'compiler-rt-git' 'compiler-rt' 'clang-git' 'clang' 'clang-tools-extra-git'  'clang-tools-extra' 'libclc-git' 'libclc' 'lld-git' 'lld' 'lldb-git' 'lldb' 'openmp-git' 'openmp' 'polly-git' 'polly' 'libc++-git' 'libc++' 'libc++abi-git' 'libc++abi' 'libunwind' 'libunwind-git')
-    conflicts=('llvm-git' 'llvm' 'llvm-libs-git'  'llvm-libs' 'compiler-rt-git' 'compiler-rt' 'clang-git' 'clang' 'clang-tools-extra-git'  'clang-tools-extra' 'libclc-git' 'libclc' 'lld-git' 'lld' 'lldb-git' 'lldb' 'openmp-git' 'openmp' 'polly-git' 'polly' 'libc++-git' 'libc++' 'libc++abi-git' 'libc++abi' 'libunwind' 'libunwind-git')
+    provides=('llvm-git' 'llvm' 'llvm-libs-git' 'llvm-libs' 'compiler-rt-git' 'compiler-rt' 'clang-git' 'clang' 'clang-tools-extra-git' 'clang-tools-extra' 'libclc-git' 'libclc' 'lld-git' 'lld' 'lldb-git' 'lldb' 'openmp-git' 'openmp' 'polly-git' 'polly' 'libc++-git' 'libc++' 'libc++abi-git' 'libc++abi' 'libunwind' 'libunwind-git')
+    conflicts=('llvm-git' 'llvm' 'llvm-libs-git' 'llvm-libs' 'compiler-rt-git' 'compiler-rt' 'clang-git' 'clang' 'clang-tools-extra-git' 'clang-tools-extra' 'libclc-git' 'libclc' 'lld-git' 'lld' 'lldb-git' 'lldb' 'openmp-git' 'openmp' 'polly-git' 'polly' 'libc++-git' 'libc++' 'libc++abi-git' 'libc++abi' 'libunwind' 'libunwind-git')
     DESTDIR="$pkgdir" ninja -C _build $NINJAFLAGS install
 }
