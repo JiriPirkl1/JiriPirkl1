@@ -1,0 +1,40 @@
+pkgname=('mesa-git')
+pkgver=25.0.1
+pkgrel=1
+arch=('x86_64')
+depends=('expat' 'gcc-libs' 'glibc' 'libdrm' 'libelf' 'libglvnd' 'libx11' 'libxcb' 'libxext' 'libxshmfence' 'libxxf86vm' 'llvm-libs' 'lm_sensors' 'spirv-tools' 'wayland' 'zlib' 'zstd' 'clang' 'libclc' 'spirv-llvm-translator' 'libpng' 'python' 'systemd-libs' 'vulkan-icd-loader' 'xcb-util-keysyms')
+makedepends=('clang' 'expat' 'gcc-libs' 'glibc' 'libdrm' 'libelf' 'libglvnd' 'libpng' 'libva' 'libvdpau' 'libx11' 'libxcb' 'libxext' 'libxml2' 'libxrandr' 'libxshmfence' 'libxxf86vm' 'llvm' 'llvm-libs' 'lm_sensors' 'rust' 'spirv-llvm-translator' 'spirv-tools' 'systemd-libs' 'vulkan-icd-loader' 'wayland' 'xcb-util-keysyms' 'zlib' 'zstd' 'cbindgen' 'cmake' 'elfutils' 'glslang' 'libclc' 'meson' 'python-mako' 'python-packaging' 'python-ply' 'python-yaml' 'rust-bindgen' 'wayland-protocols' 'xorgproto' 'valgrind' 'directx-headers' 'python-sphinx' 'python-sphinx-hawkmoth')
+source=("mesa::git+https://gitlab.freedesktop.org/mesa/mesa.git")
+pkgver() {
+    cd mesa
+    local _ver
+    _ver=$(<VERSION)
+    local _patchver
+    local _patchfile
+    for _patchfile in "${source[@]}"; do
+        _patchfile="${_patchfile%%::*}"
+        _patchfile="${_patchfile##*/}"
+        [[ $_patchfile = *.patch ]] || continue
+        _patchver="${_patchver}$(md5sum ${srcdir}/${_patchfile} | cut -c1-32)"
+    done
+    _patchver="$(echo -n $_patchver | md5sum | cut -c1-7)"
+    echo ${_ver/-/_}.$(git rev-list --count HEAD).$(git rev-parse --short HEAD).${_patchver}
+}
+build() {
+    meson setup mesa _build \
+        -D buildtype=release \
+        -D gallium-drivers=r300,r600,radeonsi,nouveau,virgl,svga,llvmpipe,softpipe,iris,crocus,i915,zink,d3d12 \
+        -D gallium-extra-hud=true \
+        -D gallium-nine=true \
+        -D gallium-opencl=disabled \
+        -D gallium-rusticl=true \
+        -D video-codecs=all \
+        -D vulkan-drivers=amd,gfxstream,intel,intel_hasvk,nouveau,swrast,virtio \
+        -D vulkan-layers=device-select,intel-nullhw,overlay,screenshot,vram-report-limit
+    ninja -C _build $NINJAFLAGS
+}
+package() {
+    provides=('libva-mesa-driver' 'mesa-libgl' 'mesa-vdpau' 'libva-driver' 'opengl-driver' 'vdpau-driver' 'opencl-clover-mesa' 'opencl-rusticl-mesa' 'vulkan-gfxstream' 'vulkan-intel' 'vulkan-nouveau' 'vulkan-radeon' 'vulkan-swrast' 'vulkan-virtio' 'vulkan-mesa-layers' 'opencl-driver' 'vulkan-driver')
+    conflicts=('libva-mesa-driver' 'mesa-libgl' 'mesa-vdpau' 'libva-driver' 'opengl-driver' 'vdpau-driver' 'opencl-clover-mesa' 'opencl-rusticl-mesa' 'vulkan-gfxstream' 'vulkan-intel' 'vulkan-nouveau' 'vulkan-radeon' 'vulkan-swrast' 'vulkan-virtio' 'vulkan-mesa-layers' 'opencl-driver' 'vulkan-driver')
+    DESTDIR="$pkgdir" ninja -C _build $NINJAFLAGS install
+}

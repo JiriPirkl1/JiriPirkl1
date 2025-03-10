@@ -1,0 +1,41 @@
+pkgname=('llvm-git')
+pkgver=21.0.0_r529971.9764659fb4ae
+pkgrel=1
+arch=('x86_64')
+depends=('llvm-libs' 'libelf' 'libffi' 'gcc-libs' 'gcc' 'compiler-rt' 'zlib' 'zstd' 'curl' 'perl' 'libedit' 'libxml2' 'ncurses')
+makedepends=('llvm' 'clang' 'cmake' 'ninja' 'python' 'python-sphinx' 'python-myst-parser' 'swig' 'python-setuptools' 'python-psutil' 'spirv-llvm-translator' 'lib32-gcc-libs')
+source=("llvm-project::git+https://github.com/llvm/llvm-project.git")
+options=(!lto)
+pkgver() {
+    cd llvm-project/cmake/Modules
+    local _pkgver=$(awk -F 'MAJOR |MINOR |PATCH |)' \
+            'BEGIN { ORS="." ; i=0 } \
+             /set\(LLVM_VERSION_/ { print $2 ; i++ ; if (i==2) ORS="" } \
+             END { print "\n" }' \
+             LLVMVersion.cmake)_r$(git rev-list --count HEAD).$(git rev-parse --short HEAD)
+    echo "$_pkgver"
+}
+build() {
+    cmake -B _build -S "$srcdir"/llvm-project/llvm -G Ninja \
+        -D CMAKE_BUILD_TYPE=Release \
+        -D CMAKE_INSTALL_PREFIX=/usr \
+        -D LLVM_BINUTILS_INCDIR=/usr/include \
+        -D LLVM_ENABLE_PROJECTS="compiler-rt;clang;clang-tools-extra;libclc;lld;lldb;openmp;polly" \
+        -D LLVM_ENABLE_RTTI=ON \
+        -D LLVM_ENABLE_FFI=ON \
+        -D LLVM_BUILD_LLVM_DYLIB=ON \
+        -D LLVM_LINK_LLVM_DYLIB=ON \
+        -D LLVM_INSTALL_UTILS=ON
+    ninja -C _build $NINJAFLAGS
+    cmake -B _build_runtimes -S "$srcdir"/llvm-project/runtimes -G Ninja \
+        -D CMAKE_BUILD_TYPE=Release \
+        -D CMAKE_INSTALL_PREFIX=/usr \
+        -D LLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"
+    ninja -C _build_runtimes $NINJAFLAGS    
+}
+package() {
+    provides=('llvm-git' 'llvm' 'llvm-libs-git' 'llvm-libs' 'compiler-rt-git' 'compiler-rt' 'clang-git' 'clang' 'clang-tools-extra-git' 'clang-tools-extra' 'libclc-git' 'libclc' 'lld-git' 'lld' 'lldb-git' 'lldb' 'openmp-git' 'openmp' 'polly-git' 'polly' 'libc++-git' 'libc++' 'libc++abi-git' 'libc++abi' 'libunwind' 'libunwind-git')
+    conflicts=('llvm-git' 'llvm' 'llvm-libs-git' 'llvm-libs' 'compiler-rt-git' 'compiler-rt' 'clang-git' 'clang' 'clang-tools-extra-git' 'clang-tools-extra' 'libclc-git' 'libclc' 'lld-git' 'lld' 'lldb-git' 'lldb' 'openmp-git' 'openmp' 'polly-git' 'polly' 'libc++-git' 'libc++' 'libc++abi-git' 'libc++abi' 'libunwind' 'libunwind-git')
+    DESTDIR="$pkgdir" ninja -C _build $NINJAFLAGS install
+    DESTDIR="$pkgdir" ninja -C _build_runtimes $NINJAFLAGS install
+}
